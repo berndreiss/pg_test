@@ -1,21 +1,16 @@
 ---
-- name: Create build directory for pg-duck-docker
+- name: Stop and remove existing pg-duck-docker container if it exists
+  command: docker rm -f pg-duck-docker
+  ignore_errors: yes
+
+- name: Create /var/parquet directory on host
   file:
-    path: /opt/pg-duck-docker
+    path: /var/parquet
     state: directory
     mode: '0755'
 
-- name: Copy Dockerfile for pg_duckdb
-  copy:
-    src: Dockerfile
-    dest: /opt/pg-duck-docker/Dockerfile
-    mode: '0644'
-
-- name: Copy docker-compose.yml for pg-duck-docker
-  copy:
-    src: docker-compose.yml
-    dest: /opt/pg-duck-docker/docker-compose.yml
-    mode: '0644'
+- name: Set ownership for postgres user
+  command: chown -R 999:999 /var/parquet
 
 - name: Start Docker
   systemd:
@@ -23,15 +18,19 @@
     state: started
     enabled: yes
 
-- name: Build and start pg-duck-docker container
-  command: docker compose up -d --build
-  args:
-    chdir: /opt/pg-duck-docker
+- name: Run pg-duck-docker container
+  command: >
+    docker run -d
+    --name pg-duck-docker
+    -e POSTGRES_PASSWORD=duckdb
+    -p 5433:5432
+    -v /var/parquet:/var/parquet
+    pgduckdb/pgduckdb:18-v1.1.1
 
 - name: Wait for PostgreSQL
   wait_for:
     host: localhost
-    port: 5432
+    port: 5433
     delay: 10
     timeout: 120
 

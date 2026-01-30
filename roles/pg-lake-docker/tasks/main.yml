@@ -21,23 +21,41 @@
 #- docker-compose-plugin
 #state: present
 
-- name: Install Taskfile
-  shell: sh -c "$(curl -sL https://taskfile.dev/install.sh)" -- -d
-  args:
-    creates: /usr/local/bin/task
-
 - name: Start Docker
   systemd:
     name: docker
     state: started
     enabled: yes
 
-      #- name: Clone pg_lake repository
-      #git:
-      #repo: https://github.com/Snowflake-Labs/pg_lake.git
-      #dest: /opt/pg_lake
-      #version: main
-      #force: yes
+#- name: Clone pg_lake repository
+  #git:
+    #repo: https://github.com/Snowflake-Labs/pg_lake.git
+    #dest: /opt/pg_lake
+    #version: main
+    #force: yes
+    
+- name: Create /var/parquet directory
+  file:
+    path: /var/parquet
+    state: directory
+    mode: '0777'
+    owner: root
+    group: root
+
+- name: Add /var/parquet volume mount to docker-compose.yml
+  lineinfile:
+    path: /opt/pg_lake/docker/docker-compose.yml
+    insertafter: '      - pg-shared-tmp-dir-volume:/home/postgres/pgsql-\$\{PG_MAJOR:-18\}/data/base/pgsql_tmp'
+    line: '      - /var/parquet:/var/parquet'
+    regexp: '^\s+- /var/parquet:/var/parquet$'
+    state: present
+    firstmatch: yes
+
+
+- name: Install Taskfile
+  shell: cd /opt/pg_lake/docker && sh -c "$(curl -sL https://taskfile.dev/install.sh)" -- -d
+  args:
+    creates: /usr/local/bin/task
 
 - name: Build pg_lake Docker image
   command: ./bin/task compose:up
