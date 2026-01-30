@@ -1,0 +1,46 @@
+---
+- name: Create build directory for pg-duck-docker
+  file:
+    path: /opt/pg-duck-docker
+    state: directory
+    mode: '0755'
+
+- name: Copy Dockerfile for pg_duckdb
+  copy:
+    src: Dockerfile
+    dest: /opt/pg-duck-docker/Dockerfile
+    mode: '0644'
+
+- name: Copy docker-compose.yml for pg-duck-docker
+  copy:
+    src: docker-compose.yml
+    dest: /opt/pg-duck-docker/docker-compose.yml
+    mode: '0644'
+
+- name: Start Docker
+  systemd:
+    name: docker
+    state: started
+    enabled: yes
+
+- name: Build and start pg-duck-docker container
+  command: docker compose up -d --build
+  args:
+    chdir: /opt/pg-duck-docker
+
+- name: Wait for PostgreSQL
+  wait_for:
+    host: localhost
+    port: 5432
+    delay: 10
+    timeout: 120
+
+- name: Create pg_duckdb extension
+  command: >
+    docker exec pg-duck-docker psql -U postgres
+    -d postgres
+    -c "CREATE EXTENSION IF NOT EXISTS pg_duckdb;"
+  retries: 3
+  delay: 5
+  register: result
+  until: result.rc == 0

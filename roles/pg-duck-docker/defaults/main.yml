@@ -1,0 +1,7 @@
+#SPDX-License-Identifier: MIT-0
+---
+# defaults file for pg-duck-docker
+postgres_password: postgres
+postgres_user: postgres
+postgres_db: postgres
+postgres_port: 5432

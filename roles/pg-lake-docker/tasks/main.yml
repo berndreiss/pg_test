@@ -1,0 +1,54 @@
+---
+#- name: Install required packages
+#dnf:
+#name:
+#- git
+#- wget
+#- curl
+#state: present
+
+      #- name: Add Docker repository
+  #command: dnf config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo
+  #args:
+  # creates: /etc/yum.repos.d/docker-ce.repo
+
+#- name: Install Docker
+#dnf:
+#name:
+#- docker-ce
+#- docker-ce-cli
+#- containerd.io
+#- docker-compose-plugin
+#state: present
+
+- name: Install Taskfile
+  shell: sh -c "$(curl -sL https://taskfile.dev/install.sh)" -- -d
+  args:
+    creates: /usr/local/bin/task
+
+- name: Start Docker
+  systemd:
+    name: docker
+    state: started
+    enabled: yes
+
+      #- name: Clone pg_lake repository
+      #git:
+      #repo: https://github.com/Snowflake-Labs/pg_lake.git
+      #dest: /opt/pg_lake
+      #version: main
+      #force: yes
+
+- name: Build pg_lake Docker image
+  command: ./bin/task compose:up
+  args:
+    chdir: /opt/pg_lake/docker
+  environment:
+    POSTGRES_PASSWORD: "{{ postgres_password }}"
+
+- name: Wait for PostgreSQL
+  wait_for:
+    host: localhost
+    port: 5432
+    delay: 10
+    timeout: 120

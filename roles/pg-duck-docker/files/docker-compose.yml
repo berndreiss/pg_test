@@ -1,0 +1,17 @@
+services:
+  postgres-duckdb:
+    build: .
+    container_name: pg-duck-docker
+    environment:
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_USER: postgres
+      POSTGRES_DB: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - pg_duck_data:/var/lib/postgresql/data
+    command: >
+      postgres
+      -c shared_preload_libraries=pg_duckdb
+volumes:
+  pg_duck_data:
